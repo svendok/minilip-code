@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strain Tracker — PTFE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0d12;
+    --surface: #141821;
+    --surface-2: #1a1f2b;
+    --border: #252b38;
+    --border-bright: #353c4a;
+    --text: #e4e7ec;
+    --text-dim: #8a93a3;
+    --text-faint: #5a6373;
+    --accent: #5eead4;
+    --accent-dim: #2dd4bf;
+    --warn: #fbbf24;
+    --danger: #f87171;
+    --track: #f43f5e;
+    --calib: #60a5fa;
+    --traj: #c084fc;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .container { max-width: 1500px; margin: 0 auto; }
+
+  header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-bottom: 14px; margin-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    font-size: 18px; font-weight: 600; margin: 0;
+    letter-spacing: -0.01em;
+  }
+  header h1 .accent { color: var(--accent); }
+  header .meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--text-faint);
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+
+  .layout { display: grid; grid-template-columns: 1fr 360px; gap: 18px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-header .title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .panel-header .badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+  .panel-body { padding: 14px; }
+
+  /* Controls */
+  button {
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border-bright);
+    padding: 7px 13px;
+    border-radius: 4px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    letter-spacing: 0.01em;
+  }
+  button:hover:not(:disabled) {
+    background: var(--border);
+    border-color: var(--text-faint);
+  }
+  button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  button.primary {
+    background: var(--accent);
+    color: #0a0d12;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  button.primary:hover:not(:disabled) {
+    background: var(--accent-dim);
+    border-color: var(--accent-dim);
+  }
+  button.danger {
+    background: transparent;
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+  button.danger:hover:not(:disabled) {
+    background: var(--danger);
+    color: #0a0d12;
+  }
+  button.icon {
+    padding: 6px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+  }
+
+  input[type="number"], input[type="text"], select {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-bright);
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    width: 80px;
+  }
+  input[type="number"]:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  input[type="file"] {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  input[type="file"]::file-selector-button {
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border-bright);
+    padding: 6px 12px;
+    border-radius: 4px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+
+  label {
+    font-size: 12px;
+    color: var(--text-dim);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  label .mono { color: var(--text); }
+
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row + .row { margin-top: 8px; }
+
+  /* Video display */
+  .video-wrap {
+    position: relative;
+    background: #000;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 200px;
+    border: 1px solid var(--border);
+  }
+  .video-wrap.empty::before {
+    content: 'No video loaded';
+    color: var(--text-faint);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  #videoCanvas, #overlayCanvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+  #videoCanvas { cursor: crosshair; }
+  #overlayCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Scrubber */
+  .scrubber {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: auto auto 1fr auto auto;
+    align-items: center;
+    gap: 10px;
+  }
+  .scrubber .nav-btns { display: flex; gap: 4px; }
+  .frame-info {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex; gap: 12px;
+    margin-top: 8px;
+  }
+  .frame-info b { color: var(--text); font-weight: 500; }
+
+  /* Status bar */
+  .status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-top: 12px;
+    border-left: 3px solid var(--accent);
+    background: rgba(94, 234, 212, 0.06);
+  }
+  .status.info { border-color: var(--accent); background: rgba(94, 234, 212, 0.06); }
+  .status.warn { border-color: var(--warn); background: rgba(251, 191, 36, 0.06); }
+  .status.error { border-color: var(--danger); background: rgba(248, 113, 113, 0.06); }
+  .status.success { border-color: var(--accent); background: rgba(94, 234, 212, 0.08); }
+
+  /* Sections in side panel */
+  .section { padding: 14px; border-bottom: 1px solid var(--border); }
+  .section:last-child { border-bottom: none; }
+  .section h3 {
+    margin: 0 0 10px 0;
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    color: var(--text-dim);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section h3 .num {
+    color: var(--accent);
+    background: rgba(94, 234, 212, 0.1);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+  }
+  .section .stat {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    padding: 6px 8px;
+    background: var(--bg);
+    border-radius: 3px;
+    border: 1px solid var(--border);
+  }
+  .section .stat b { color: var(--text); font-weight: 500; }
+  .section .stat.active { border-color: var(--accent); color: var(--accent); }
+
+  progress {
+    width: 100%; height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 8px;
+  }
+  progress::-webkit-progress-bar { background: var(--border); border-radius: 2px; }
+  progress::-webkit-progress-value { background: var(--accent); border-radius: 2px; }
+  progress::-moz-progress-bar { background: var(--accent); border-radius: 2px; }
+
+  /* Plot */
+  #plotCanvas {
+    width: 100%;
+    height: 280px;
+    display: block;
+  }
+
+  .help {
+    font-size: 11px;
+    color: var(--text-faint);
+    line-height: 1.4;
+    margin-top: 6px;
+  }
+
+  details {
+    margin-top: 8px;
+    font-size: 12px;
+  }
+  details summary {
+    cursor: pointer;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    padding: 4px 0;
+  }
+  details summary:hover { color: var(--text); }
+  details .help { margin-top: 6px; padding-left: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>STRAIN<span class="accent">·</span>TRACKER</h1>
+    <span class="meta">v1 · NCC template matching · subpixel</span>
+  </header>
+
+  <div class="layout">
+
+    <!-- LEFT: Video + Plot -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="title">Source</span>
+          <span class="badge mono" id="videoMeta">—</span>
+        </div>
+        <div class="panel-body">
+          <div class="row">
+            <input type="file" id="videoFile" accept="video/*">
+            <label>fps <input type="number" id="fpsInput" value="120" min="1" max="1000" step="1"></label>
+          </div>
+
+          <div class="video-wrap empty" id="videoWrap" style="margin-top: 12px;">
+            <canvas id="videoCanvas"></canvas>
+            <canvas id="overlayCanvas"></canvas>
+          </div>
+
+          <div class="scrubber">
+            <div class="nav-btns">
+              <button class="icon" id="stepBackBtn" disabled title="Previous frame">◀</button>
+              <button class="icon" id="playPauseBtn" disabled title="Play/Pause">▶</button>
+              <button class="icon" id="stepForwardBtn" disabled title="Next frame">▶|</button>
+            </div>
+            <span></span>
+            <input type="range" id="timeSlider" min="0" max="1000" value="0" disabled>
+            <span></span>
+            <span></span>
+          </div>
+
+          <div class="frame-info">
+            <span>Frame: <b id="frameDisplay">—</b> / <span id="totalFrames">—</span></span>
+            <span>Time: <b id="timeDisplay">—</b> s</span>
+            <span>Match: <b id="scoreDisplay">—</b></span>
+          </div>
+
+          <div id="status" class="status info">Load a video to begin.</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top: 14px;">
+        <div class="panel-header">
+          <span class="title">Displacement vs Time</span>
+          <span class="badge mono" id="plotMeta">—</span>
+        </div>
+        <div class="panel-body">
+          <canvas id="plotCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Controls -->
+    <div class="panel" style="align-self: start;">
+      <div class="panel-header">
+        <span class="title">Controls</span>
+      </div>
+
+      <div class="section">
+        <h3><span class="num">01</span> Mark Feature</h3>
+        <div class="row">
+          <button id="markBtn" disabled>Set Point</button>
+          <button id="clearMarkBtn" disabled>Clear</button>
+        </div>
+        <div class="row" style="margin-top: 8px;">
+          <label>Template ± <input type="number" id="templateSize" value="20" min="5" max="80"></label>
+          <label>Search ± <input type="number" id="searchRadius" value="25" min="5" max="120"></label>
+        </div>
+        <div class="stat" id="markStat">— no point set</div>
+        <p class="help">Scrub to a clear frame, then click your marker on the strip. Template is the green box; search box is yellow.</p>
+      </div>
+
+      <div class="section">
+        <h3><span class="num">02</span> Calibrate Scale</h3>
+        <div class="row">
+          <button id="calibrateBtn" disabled>Pick 2 Ruler Points</button>
+        </div>
+        <div class="row" style="margin-top: 8px;">
+          <label>Real <input type="number" id="realDistance" value="10" step="0.1" min="0.001"></label>
+          <select id="distanceUnit">
+            <option value="mm">mm</option>
+            <option value="cm">cm</option>
+            <option value="m">m</option>
+            <option value="in">in</option>
+          </select>
+        </div>
+        <div class="stat" id="calibrationStat">— pixels only</div>
+        <p class="help">Click two known points on the ruler. Set the real distance between them above (you can change it after clicking).</p>
+      </div>
+
+      <div class="section">
+        <h3><span class="num">03</span> Track</h3>
+        <div class="row">
+          <label>Every <input type="number" id="frameStep" value="1" min="1" style="width: 50px;"> frame(s)</label>
+        </div>
+        <div class="row" style="margin-top: 8px;">
+          <button id="trackBtn" class="primary" disabled>Start Tracking</button>
+          <button id="stopBtn" class="danger" disabled>Stop</button>
+        </div>
+        <div class="row" style="margin-top: 8px;">
+          <button id="resetDataBtn" disabled>Clear Data</button>
+        </div>
+        <progress id="trackProgress" value="0" max="100" style="display:none;"></progress>
+        <div class="stat" id="trackStat">— 0 data points</div>
+        <details>
+          <summary>tracking tips</summary>
+          <p class="help">
+            Increase template size for blurry features. Increase search radius if the strip moves fast between frames. Tracking starts at the current frame.
+          </p>
+        </details>
+      </div>
+
+      <div class="section">
+        <h3><span class="num">04</span> Export</h3>
+        <div class="row">
+          <button id="exportBtn" disabled>Download CSV</button>
+        </div>
+        <p class="help">CSV includes: frame, time, x/y in pixels, x/y in calibrated units, dx from start, match score.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<video id="hiddenVideo" style="display:none;" crossorigin="anonymous" muted playsinline></video>
+
+<script>
+//---------------------------------------------------------------------
+// State
+//---------------------------------------------------------------------
+const state = {
+  fps: 120,
+  currentFrame: 0,
+  totalFrames: 0,
+  duration: 0,
+  trackingPoint: null,   // {x, y} in video pixels
+  template: null,        // {data: Float32Array (zero-mean unit-norm), w, h}
+  calibration: null,     // {p1, p2, realDistance, unit, pxPerUnit}
+  calibPick: [],         // partial calibration points
+  trackingData: [],      // [{frame, time, x, y, score}]
+  mode: 'idle',          // 'idle' | 'marking' | 'calib-p1' | 'calib-p2'
+  isTracking: false,
+  shouldStop: false,
+  lastScore: null,
+};
+
+//---------------------------------------------------------------------
+// DOM
+//---------------------------------------------------------------------
+const video = document.getElementById('hiddenVideo');
+const videoCanvas = document.getElementById('videoCanvas');
+const overlayCanvas = document.getElementById('overlayCanvas');
+const vctx = videoCanvas.getContext('2d', { willReadFrequently: true });
+const octx = overlayCanvas.getContext('2d');
+const plotCanvas = document.getElementById('plotCanvas');
+const pctx = plotCanvas.getContext('2d');
+
+const els = {
+  fileInput: id('videoFile'),
+  fpsInput: id('fpsInput'),
+  videoWrap: id('videoWrap'),
+  videoMeta: id('videoMeta'),
+  playPause: id('playPauseBtn'),
+  stepBack: id('stepBackBtn'),
+  stepForward: id('stepForwardBtn'),
+  slider: id('timeSlider'),
+  frameDisplay: id('frameDisplay'),
+  totalFrames: id('totalFrames'),
+  timeDisplay: id('timeDisplay'),
+  scoreDisplay: id('scoreDisplay'),
+  status: id('status'),
+  markBtn: id('markBtn'),
+  clearMarkBtn: id('clearMarkBtn'),
+  markStat: id('markStat'),
+  templateSize: id('templateSize'),
+  searchRadius: id('searchRadius'),
+  calibrateBtn: id('calibrateBtn'),
+  realDistance: id('realDistance'),
+  distanceUnit: id('distanceUnit'),
+  calibrationStat: id('calibrationStat'),
+  frameStep: id('frameStep'),
+  trackBtn: id('trackBtn'),
+  stopBtn: id('stopBtn'),
+  resetDataBtn: id('resetDataBtn'),
+  trackProgress: id('trackProgress'),
+  trackStat: id('trackStat'),
+  exportBtn: id('exportBtn'),
+  plotMeta: id('plotMeta'),
+};
+
+function id(x){return document.getElementById(x);}
+
+function setStatus(msg, type='info'){
+  els.status.textContent = msg;
+  els.status.className = 'status ' + type;
+}
+
+//---------------------------------------------------------------------
+// Video loading & seeking
+//---------------------------------------------------------------------
+els.fileInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  setStatus(`Loading "${file.name}"...`, 'info');
+  try {
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    await new Promise((res, rej) => {
+      video.onloadedmetadata = res;
+      video.onerror = () => rej(new Error('Video could not be decoded.'));
+    });
+    state.fps = parseFloat(els.fpsInput.value) || 120;
+    state.duration = video.duration;
+    state.totalFrames = Math.max(1, Math.floor(state.duration * state.fps));
+
+    videoCanvas.width = video.videoWidth;
+    videoCanvas.height = video.videoHeight;
+    overlayCanvas.width = video.videoWidth;
+    overlayCanvas.height = video.videoHeight;
+
+    els.slider.max = state.totalFrames - 1;
+    els.slider.value = 0;
+    els.slider.disabled = false;
+    els.totalFrames.textContent = state.totalFrames;
+    els.playPause.disabled = false;
+    els.stepBack.disabled = false;
+    els.stepForward.disabled = false;
+    els.markBtn.disabled = false;
+    els.calibrateBtn.disabled = false;
+    els.videoMeta.textContent = `${video.videoWidth}×${video.videoHeight} · ${state.duration.toFixed(2)}s`;
+
+    els.videoWrap.classList.remove('empty');
+
+    // Reset state
+    state.trackingPoint = null;
+    state.template = null;
+    state.calibration = null;
+    state.trackingData = [];
+    state.lastScore = null;
+    refreshUI();
+
+    await seekToFrame(0);
+    setStatus(`Loaded. ${state.totalFrames} frames @ ${state.fps} fps. Set a tracking point next.`, 'success');
+    updatePlot();
+  } catch (err) {
+    setStatus('Error: ' + err.message, 'error');
+  }
+});
+
+els.fpsInput.addEventListener('change', () => {
+  state.fps = Math.max(1, parseFloat(els.fpsInput.value) || 120);
+  if (state.duration) {
+    state.totalFrames = Math.max(1, Math.floor(state.duration * state.fps));
+    els.slider.max = state.totalFrames - 1;
+    els.totalFrames.textContent = state.totalFrames;
+  }
+});
+
+async function seekToFrame(frame){
+  frame = Math.max(0, Math.min(state.totalFrames - 1, Math.round(frame)));
+  // Aim at midpoint of the frame's time interval for robust precision
+  const time = (frame + 0.5) / state.fps;
+  await new Promise((resolve) => {
+    const onSeeked = () => { video.removeEventListener('seeked', onSeeked); resolve(); };
+    video.addEventListener('seeked', onSeeked);
+    try { video.currentTime = Math.min(time, state.duration - 1e-6); }
+    catch(e){ video.removeEventListener('seeked', onSeeked); resolve(); }
+  });
+  state.currentFrame = frame;
+  drawFrame();
+  els.frameDisplay.textContent = frame;
+  els.timeDisplay.textContent = (frame / state.fps).toFixed(4);
+  els.slider.value = frame;
+}
+
+function drawFrame(){
+  vctx.drawImage(video, 0, 0, videoCanvas.width, videoCanvas.height);
+  drawOverlay();
+}
+
+//---------------------------------------------------------------------
+// Overlay (template box, calibration line, trajectory)
+//---------------------------------------------------------------------
+function drawOverlay(){
+  octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+  // Trajectory line
+  if (state.trackingData.length > 1){
+    octx.strokeStyle = 'rgba(192, 132, 252, 0.5)';
+    octx.lineWidth = 1.5;
+    octx.beginPath();
+    state.trackingData.forEach((d, i) => {
+      if (i === 0) octx.moveTo(d.x, d.y); else octx.lineTo(d.x, d.y);
+    });
+    octx.stroke();
+  }
+
+  // Tracking point and boxes
+  if (state.trackingPoint){
+    const tSize = parseInt(els.templateSize.value);
+    const sR = parseInt(els.searchRadius.value);
+    const {x, y} = state.trackingPoint;
+
+    // Search box
+    octx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
+    octx.lineWidth = 1;
+    octx.setLineDash([3, 3]);
+    octx.strokeRect(x - tSize - sR, y - tSize - sR, 2*(tSize+sR), 2*(tSize+sR));
+    octx.setLineDash([]);
+
+    // Template box
+    octx.strokeStyle = 'rgba(94, 234, 212, 0.9)';
+    octx.lineWidth = 1.5;
+    octx.strokeRect(x - tSize, y - tSize, 2*tSize, 2*tSize);
+
+    // Crosshair (rose)
+    octx.strokeStyle = '#f43f5e';
+    octx.lineWidth = 1.5;
+    octx.beginPath();
+    octx.moveTo(x - 12, y); octx.lineTo(x - 4, y);
+    octx.moveTo(x + 4, y); octx.lineTo(x + 12, y);
+    octx.moveTo(x, y - 12); octx.lineTo(x, y - 4);
+    octx.moveTo(x, y + 4); octx.lineTo(x, y + 12);
+    octx.stroke();
+    octx.fillStyle = '#f43f5e';
+    octx.beginPath(); octx.arc(x, y, 1.5, 0, 2*Math.PI); octx.fill();
+  }
+
+  // Calibration line
+  if (state.calibration){
+    const {p1, p2} = state.calibration;
+    octx.strokeStyle = '#60a5fa';
+    octx.lineWidth = 2;
+    octx.beginPath();
+    octx.moveTo(p1.x, p1.y); octx.lineTo(p2.x, p2.y);
+    octx.stroke();
+    [p1, p2].forEach(p => {
+      octx.fillStyle = '#60a5fa';
+      octx.beginPath(); octx.arc(p.x, p.y, 4, 0, 2*Math.PI); octx.fill();
+      octx.strokeStyle = '#0a0d12';
+      octx.lineWidth = 1.5;
+      octx.beginPath(); octx.arc(p.x, p.y, 4, 0, 2*Math.PI); octx.stroke();
+    });
+  }
+
+  // Partial calibration pick
+  state.calibPick.forEach(p => {
+    octx.fillStyle = '#fbbf24';
+    octx.beginPath(); octx.arc(p.x, p.y, 4, 0, 2*Math.PI); octx.fill();
+  });
+}
+
+//---------------------------------------------------------------------
+// Click → canvas coords
+//---------------------------------------------------------------------
+function canvasCoords(e){
+  const rect = videoCanvas.getBoundingClientRect();
+  const sx = videoCanvas.width / rect.width;
+  const sy = videoCanvas.height / rect.height;
+  return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
+}
+
+videoCanvas.addEventListener('click', (e) => {
+  const {x, y} = canvasCoords(e);
+  const rx = Math.round(x), ry = Math.round(y);
+
+  if (state.mode === 'marking'){
+    const tSize = parseInt(els.templateSize.value);
+    if (rx - tSize < 0 || ry - tSize < 0 || rx + tSize >= videoCanvas.width || ry + tSize >= videoCanvas.height){
+      setStatus('Point too close to image edge for the chosen template size.', 'warn');
+      return;
+    }
+    state.trackingPoint = {x: rx, y: ry};
+    extractTemplate();
+    state.mode = 'idle';
+    refreshUI();
+    setStatus(`Tracking point set at (${rx}, ${ry}). Now calibrate and start tracking.`, 'success');
+  } else if (state.mode === 'calib-p1'){
+    state.calibPick = [{x, y}];
+    state.mode = 'calib-p2';
+    setStatus('Click the SECOND ruler point.', 'info');
+    drawOverlay();
+  } else if (state.mode === 'calib-p2'){
+    state.calibPick.push({x, y});
+    const [p1, p2] = state.calibPick;
+    const realDist = Math.max(1e-6, parseFloat(els.realDistance.value) || 1);
+    const unit = els.distanceUnit.value;
+    const pxDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    state.calibration = { p1, p2, realDistance: realDist, unit, pxPerUnit: pxDist / realDist };
+    state.calibPick = [];
+    state.mode = 'idle';
+    refreshUI();
+    setStatus(`Calibrated: ${pxDist.toFixed(2)} px ≡ ${realDist} ${unit}  (${(pxDist/realDist).toFixed(3)} px/${unit})`, 'success');
+    updatePlot();
+  }
+});
+
+els.markBtn.addEventListener('click', () => {
+  state.mode = 'marking';
+  setStatus('Click the feature on the strip you want to track.', 'info');
+});
+els.clearMarkBtn.addEventListener('click', () => {
+  state.trackingPoint = null;
+  state.template = null;
+  state.lastScore = null;
+  refreshUI();
+  setStatus('Tracking point cleared.', 'info');
+});
+els.calibrateBtn.addEventListener('click', () => {
+  state.mode = 'calib-p1';
+  state.calibPick = [];
+  setStatus('Click the FIRST ruler point.', 'info');
+});
+
+els.realDistance.addEventListener('change', () => {
+  // Recompute pxPerUnit if calibration exists
+  if (state.calibration){
+    const pxDist = Math.hypot(state.calibration.p2.x - state.calibration.p1.x, state.calibration.p2.y - state.calibration.p1.y);
+    const realDist = Math.max(1e-6, parseFloat(els.realDistance.value) || 1);
+    state.calibration.realDistance = realDist;
+    state.calibration.unit = els.distanceUnit.value;
+    state.calibration.pxPerUnit = pxDist / realDist;
+    refreshUI();
+    updatePlot();
+  }
+});
+els.distanceUnit.addEventListener('change', () => els.realDistance.dispatchEvent(new Event('change')));
+
+// Re-extract template if size changes after a point is set
+els.templateSize.addEventListener('change', () => {
+  if (state.trackingPoint){
+    const tSize = parseInt(els.templateSize.value);
+    const {x, y} = state.trackingPoint;
+    if (x - tSize < 0 || y - tSize < 0 || x + tSize >= videoCanvas.width || y + tSize >= videoCanvas.height){
+      setStatus('Template extends past edge — pick smaller size or re-mark.', 'warn');
+      return;
+    }
+    extractTemplate();
+  }
+  drawOverlay();
+});
+els.searchRadius.addEventListener('change', () => drawOverlay());
+
+//---------------------------------------------------------------------
+// Scrubbing controls
+//---------------------------------------------------------------------
+els.stepBack.addEventListener('click', () => seekToFrame(state.currentFrame - 1));
+els.stepForward.addEventListener('click', () => seekToFrame(state.currentFrame + 1));
+els.slider.addEventListener('input', () => seekToFrame(parseInt(els.slider.value)));
+
+let playInterval = null;
+els.playPause.addEventListener('click', () => {
+  if (playInterval){
+    clearInterval(playInterval); playInterval = null;
+    els.playPause.textContent = '▶';
+  } else {
+    els.playPause.textContent = '❚❚';
+    playInterval = setInterval(async () => {
+      if (state.currentFrame + 1 >= state.totalFrames){
+        clearInterval(playInterval); playInterval = null; els.playPause.textContent = '▶'; return;
+      }
+      await seekToFrame(state.currentFrame + 1);
+    }, 1000 / 30);
+  }
+});
+
+//---------------------------------------------------------------------
+// Template extraction
+//---------------------------------------------------------------------
+function toGray(imgData){
+  const d = imgData.data;
+  const out = new Float32Array(imgData.width * imgData.height);
+  for (let i = 0; i < out.length; i++){
+    out[i] = 0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2];
+  }
+  return out;
+}
+
+function extractTemplate(){
+  const {x, y} = state.trackingPoint;
+  const tSize = parseInt(els.templateSize.value);
+  const w = 2*tSize, h = 2*tSize;
+  const img = vctx.getImageData(x - tSize, y - tSize, w, h);
+  const gray = toGray(img);
+
+  // Zero-mean
+  let sum = 0;
+  for (let i = 0; i < gray.length; i++) sum += gray[i];
+  const mean = sum / gray.length;
+
+  let normSq = 0;
+  const t = new Float32Array(gray.length);
+  for (let i = 0; i < gray.length; i++){
+    t[i] = gray[i] - mean;
+    normSq += t[i] * t[i];
+  }
+  const norm = Math.sqrt(normSq) || 1;
+  for (let i = 0; i < t.length; i++) t[i] /= norm;
+
+  state.template = { data: t, w, h };
+}
+
+//---------------------------------------------------------------------
+// NCC template matching with sub-pixel refinement
+//---------------------------------------------------------------------
+function findMatch(searchCx, searchCy){
+  const t = state.template.data;
+  const tW = state.template.w, tH = state.template.h;
+  const tSize = tW / 2;
+  const sR = parseInt(els.searchRadius.value);
+
+  // Bounds for candidate centers
+  const cxStart = Math.max(tSize, Math.round(searchCx - sR));
+  const cxEnd   = Math.min(videoCanvas.width - tSize - 1, Math.round(searchCx + sR));
+  const cyStart = Math.max(tSize, Math.round(searchCy - sR));
+  const cyEnd   = Math.min(videoCanvas.height - tSize - 1, Math.round(searchCy + sR));
+
+  if (cxStart > cxEnd || cyStart > cyEnd){
+    return { x: searchCx, y: searchCy, score: 0 };
+  }
+
+  const regionX = cxStart - tSize;
+  const regionY = cyStart - tSize;
+  const regionW = (cxEnd - cxStart) + tW;
+  const regionH = (cyEnd - cyStart) + tH;
+
+  const region = toGray(vctx.getImageData(regionX, regionY, regionW, regionH));
+
+  const nX = cxEnd - cxStart + 1;
+  const nY = cyEnd - cyStart + 1;
+  const scores = new Float32Array(nX * nY);
+
+  // Precompute integral image of region and squared region for fast mean/var of each candidate window.
+  // Using direct loop since tW*tH is small (e.g., 40x40 = 1600).
+  const N = tW * tH;
+
+  let best = -Infinity, bIx = 0, bIy = 0;
+
+  for (let iy = 0; iy < nY; iy++){
+    for (let ix = 0; ix < nX; ix++){
+      let sumI = 0, sumI2 = 0, sumIT = 0;
+      for (let j = 0; j < tH; j++){
+        const rOff = (iy + j) * regionW + ix;
+        const tOff = j * tW;
+        for (let i = 0; i < tW; i++){
+          const I = region[rOff + i];
+          const T = t[tOff + i];
+          sumI += I;
+          sumI2 += I * I;
+          sumIT += I * T;
+        }
+      }
+      const meanI = sumI / N;
+      const varI = sumI2 - N * meanI * meanI;
+      // Since t is zero-mean, sumIT = sum((I - meanI) * t)
+      const denom = Math.sqrt(Math.max(varI, 1e-9));
+      const score = sumIT / denom;
+      scores[iy * nX + ix] = score;
+      if (score > best){ best = score; bIx = ix; bIy = iy; }
+    }
+  }
+
+  let subX = cxStart + bIx;
+  let subY = cyStart + bIy;
+
+  // Parabolic sub-pixel refinement in X
+  if (bIx > 0 && bIx < nX - 1){
+    const sm = scores[bIy * nX + bIx - 1];
+    const sp = scores[bIy * nX + bIx + 1];
+    const d = sm - 2 * best + sp;
+    if (Math.abs(d) > 1e-9){
+      const dx = 0.5 * (sm - sp) / d;
+      if (Math.abs(dx) < 1) subX += dx;
+    }
+  }
+  if (bIy > 0 && bIy < nY - 1){
+    const sm = scores[(bIy - 1) * nX + bIx];
+    const sp = scores[(bIy + 1) * nX + bIx];
+    const d = sm - 2 * best + sp;
+    if (Math.abs(d) > 1e-9){
+      const dy = 0.5 * (sm - sp) / d;
+      if (Math.abs(dy) < 1) subY += dy;
+    }
+  }
+
+  return { x: subX, y: subY, score: best };
+}
+
+//---------------------------------------------------------------------
+// Tracking loop
+//---------------------------------------------------------------------
+els.trackBtn.addEventListener('click', startTracking);
+els.stopBtn.addEventListener('click', () => { state.shouldStop = true; });
+els.resetDataBtn.addEventListener('click', () => {
+  state.trackingData = [];
+  refreshUI();
+  drawOverlay();
+  updatePlot();
+});
+
+async function startTracking(){
+  if (!state.trackingPoint || !state.template) return;
+  state.isTracking = true;
+  state.shouldStop = false;
+  state.trackingData = [];
+  els.trackBtn.disabled = true;
+  els.stopBtn.disabled = false;
+  els.exportBtn.disabled = true;
+  els.resetDataBtn.disabled = true;
+  els.trackProgress.style.display = 'block';
+  els.trackProgress.value = 0;
+
+  const startFrame = state.currentFrame;
+  const step = Math.max(1, parseInt(els.frameStep.value));
+  const totalToProcess = Math.max(1, state.totalFrames - startFrame);
+
+  // Anchor point at first frame uses the user-marked location
+  let lastX = state.trackingPoint.x;
+  let lastY = state.trackingPoint.y;
+
+  state.trackingData.push({
+    frame: startFrame,
+    time: startFrame / state.fps,
+    x: lastX, y: lastY, score: 1.0,
+  });
+  state.lastScore = 1.0;
+
+  setStatus('Tracking...', 'info');
+  refreshUI();
+
+  for (let f = startFrame + step; f < state.totalFrames; f += step){
+    if (state.shouldStop) break;
+    await seekToFrame(f);
+
+    const r = findMatch(lastX, lastY);
+    state.trackingData.push({
+      frame: f, time: f / state.fps,
+      x: r.x, y: r.y, score: r.score,
+    });
+    lastX = r.x; lastY = r.y;
+    state.lastScore = r.score;
+
+    els.trackProgress.value = (f - startFrame) / totalToProcess * 100;
+    els.scoreDisplay.textContent = r.score.toFixed(3);
+
+    // UI updates every few frames
+    if (state.trackingData.length % 3 === 0){
+      els.trackStat.innerHTML = `<b>${state.trackingData.length}</b> data points`;
+      drawOverlay();
+      updatePlot();
+      await new Promise(r => setTimeout(r, 0));
+    }
+  }
+
+  state.isTracking = false;
+  els.trackBtn.disabled = false;
+  els.stopBtn.disabled = true;
+  els.trackProgress.style.display = 'none';
+  els.exportBtn.disabled = state.trackingData.length === 0;
+  els.resetDataBtn.disabled = state.trackingData.length === 0;
+  els.trackStat.innerHTML = `<b>${state.trackingData.length}</b> data points`;
+
+  // Update the user-visible "current" tracking marker to last tracked position
+  if (state.trackingData.length > 0){
+    const last = state.trackingData[state.trackingData.length - 1];
+    state.trackingPoint = { x: last.x, y: last.y };
+  }
+  drawOverlay();
+  updatePlot();
+  setStatus(state.shouldStop
+    ? `Tracking stopped. ${state.trackingData.length} points recorded.`
+    : `Tracking complete. ${state.trackingData.length} points recorded.`, 'success');
+}
+
+//---------------------------------------------------------------------
+// CSV Export
+//---------------------------------------------------------------------
+els.exportBtn.addEventListener('click', () => {
+  const cal = state.calibration;
+  const unit = cal ? cal.unit : 'px';
+  const ppu = cal ? cal.pxPerUnit : 1;
+
+  const lines = [];
+  lines.push(`# Strain Tracker Export`);
+  lines.push(`# generated: ${new Date().toISOString()}`);
+  lines.push(`# fps: ${state.fps}`);
+  lines.push(`# video_size_px: ${videoCanvas.width}x${videoCanvas.height}`);
+  lines.push(`# calibration: ${cal ? `${ppu.toFixed(6)} px per ${unit}` : 'none'}`);
+  if (cal){
+    lines.push(`# calibration_points_px: (${cal.p1.x.toFixed(3)},${cal.p1.y.toFixed(3)}) - (${cal.p2.x.toFixed(3)},${cal.p2.y.toFixed(3)})`);
+    lines.push(`# calibration_real_distance: ${cal.realDistance} ${unit}`);
+  }
+  lines.push(`# template_size_px: ${state.template ? state.template.w : '-'}`);
+  lines.push(`# search_radius_px: ${els.searchRadius.value}`);
+  lines.push(`#`);
+  lines.push(`frame,time_s,x_px,y_px,x_${unit},y_${unit},dx_${unit},dy_${unit},match_score`);
+
+  const d0 = state.trackingData[0];
+  state.trackingData.forEach(d => {
+    const xCal = d.x / ppu, yCal = d.y / ppu;
+    const dx = (d.x - d0.x) / ppu;
+    const dy = (d.y - d0.y) / ppu;
+    lines.push([
+      d.frame,
+      d.time.toFixed(6),
+      d.x.toFixed(4), d.y.toFixed(4),
+      xCal.toFixed(6), yCal.toFixed(6),
+      dx.toFixed(6), dy.toFixed(6),
+      d.score.toFixed(4),
+    ].join(','));
+  });
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `strain_tracking_${new Date().toISOString().replace(/[:.]/g, '-').slice(0,19)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+
+//---------------------------------------------------------------------
+// Plot
+//---------------------------------------------------------------------
+function updatePlot(){
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = plotCanvas.clientWidth;
+  const cssH = 280;
+  plotCanvas.width = cssW * dpr;
+  plotCanvas.height = cssH * dpr;
+  plotCanvas.style.height = cssH + 'px';
+  pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  pctx.clearRect(0, 0, cssW, cssH);
+  pctx.fillStyle = '#0a0d12';
+  pctx.fillRect(0, 0, cssW, cssH);
+
+  const data = state.trackingData;
+  const cal = state.calibration;
+  const unit = cal ? cal.unit : 'px';
+
+  els.plotMeta.textContent = data.length ? `${data.length} pts · Δx in ${unit}` : '—';
+
+  const margin = { l: 64, r: 18, t: 18, b: 38 };
+  const W = cssW - margin.l - margin.r;
+  const H = cssH - margin.t - margin.b;
+
+  if (data.length < 2){
+    pctx.fillStyle = '#5a6373';
+    pctx.font = '11px "IBM Plex Mono", monospace';
+    pctx.textAlign = 'center';
+    pctx.fillText('— awaiting data —', cssW / 2, cssH / 2);
+    return;
+  }
+
+  const ppu = cal ? cal.pxPerUnit : 1;
+  const x0 = data[0].x;
+  const pts = data.map(d => ({ t: d.time, x: (d.x - x0) / ppu }));
+
+  const tMin = pts[0].t, tMax = pts[pts.length - 1].t;
+  let xMin = Infinity, xMax = -Infinity;
+  pts.forEach(p => { if (p.x < xMin) xMin = p.x; if (p.x > xMax) xMax = p.x; });
+  if (xMax - xMin < 1e-9){ xMin -= 0.5; xMax += 0.5; }
+  const pad = (xMax - xMin) * 0.1;
+  xMin -= pad; xMax += pad;
+
+  const tx = t => margin.l + (t - tMin) / (tMax - tMin || 1) * W;
+  const ty = x => margin.t + H - (x - xMin) / (xMax - xMin) * H;
+
+  // Grid
+  pctx.strokeStyle = '#1a1f2b';
+  pctx.lineWidth = 1;
+  pctx.font = '10px "IBM Plex Mono", monospace';
+  pctx.fillStyle = '#5a6373';
+
+  // Y grid + labels
+  const yTicks = 5;
+  pctx.textAlign = 'right';
+  pctx.textBaseline = 'middle';
+  for (let i = 0; i <= yTicks; i++){
+    const yPos = margin.t + i * H / yTicks;
+    const val = xMax - i * (xMax - xMin) / yTicks;
+    pctx.beginPath();
+    pctx.moveTo(margin.l, yPos);
+    pctx.lineTo(margin.l + W, yPos);
+    pctx.stroke();
+    pctx.fillText(val.toFixed(3), margin.l - 6, yPos);
+  }
+
+  // X grid + labels
+  const xTicks = 6;
+  pctx.textAlign = 'center';
+  pctx.textBaseline = 'top';
+  for (let i = 0; i <= xTicks; i++){
+    const xPos = margin.l + i * W / xTicks;
+    const val = tMin + i * (tMax - tMin) / xTicks;
+    pctx.beginPath();
+    pctx.moveTo(xPos, margin.t);
+    pctx.lineTo(xPos, margin.t + H);
+    pctx.stroke();
+    pctx.fillText(val.toFixed(3), xPos, margin.t + H + 6);
+  }
+
+  // Axis frame
+  pctx.strokeStyle = '#353c4a';
+  pctx.lineWidth = 1;
+  pctx.strokeRect(margin.l, margin.t, W, H);
+
+  // Axis labels
+  pctx.fillStyle = '#8a93a3';
+  pctx.font = '10px "IBM Plex Mono", monospace';
+  pctx.textAlign = 'center';
+  pctx.fillText('TIME (s)', margin.l + W/2, cssH - 8);
+  pctx.save();
+  pctx.translate(14, margin.t + H/2);
+  pctx.rotate(-Math.PI/2);
+  pctx.fillText(`Δx (${unit})`, 0, 0);
+  pctx.restore();
+
+  // Zero baseline
+  if (xMin <= 0 && xMax >= 0){
+    pctx.strokeStyle = '#353c4a';
+    pctx.setLineDash([2, 3]);
+    pctx.beginPath();
+    pctx.moveTo(margin.l, ty(0));
+    pctx.lineTo(margin.l + W, ty(0));
+    pctx.stroke();
+    pctx.setLineDash([]);
+  }
+
+  // Line
+  pctx.strokeStyle = '#5eead4';
+  pctx.lineWidth = 1.5;
+  pctx.beginPath();
+  pts.forEach((p, i) => {
+    const px = tx(p.t), py = ty(p.x);
+    if (i === 0) pctx.moveTo(px, py); else pctx.lineTo(px, py);
+  });
+  pctx.stroke();
+
+  // Points
+  pctx.fillStyle = '#5eead4';
+  if (pts.length < 300){
+    pts.forEach(p => {
+      pctx.beginPath();
+      pctx.arc(tx(p.t), ty(p.x), 1.8, 0, 2*Math.PI);
+      pctx.fill();
+    });
+  }
+}
+
+window.addEventListener('resize', () => { if (state.trackingData.length) updatePlot(); else updatePlot(); });
+
+//---------------------------------------------------------------------
+// UI refresh
+//---------------------------------------------------------------------
+function refreshUI(){
+  // Mark stat
+  if (state.trackingPoint){
+    els.markStat.innerHTML = `point: <b>(${state.trackingPoint.x.toFixed(1)}, ${state.trackingPoint.y.toFixed(1)})</b> px`;
+    els.markStat.classList.add('active');
+    els.clearMarkBtn.disabled = false;
+    els.trackBtn.disabled = false;
+  } else {
+    els.markStat.textContent = '— no point set';
+    els.markStat.classList.remove('active');
+    els.clearMarkBtn.disabled = true;
+    els.trackBtn.disabled = true;
+  }
+
+  // Calibration
+  if (state.calibration){
+    const c = state.calibration;
+    els.calibrationStat.innerHTML = `<b>${c.pxPerUnit.toFixed(3)}</b> px/${c.unit} · ref=<b>${c.realDistance} ${c.unit}</b>`;
+    els.calibrationStat.classList.add('active');
+  } else {
+    els.calibrationStat.textContent = '— pixels only';
+    els.calibrationStat.classList.remove('active');
+  }
+
+  // Data
+  els.trackStat.innerHTML = state.trackingData.length
+    ? `<b>${state.trackingData.length}</b> data points`
+    : '— 0 data points';
+  els.exportBtn.disabled = state.trackingData.length === 0;
+  els.resetDataBtn.disabled = state.trackingData.length === 0;
+  els.scoreDisplay.textContent = state.lastScore == null ? '—' : state.lastScore.toFixed(3);
+
+  drawOverlay();
+}
+
+// Initial plot frame
+updatePlot();
+refreshUI();
+</script>
+</body>
+</html>

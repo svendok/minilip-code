@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoMeasure — Angle & Length Tool</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0d0f12;
+    --surface: #161a1f;
+    --surface2: #1e2329;
+    --border: #2a3040;
+    --accent: #00e5a0;
+    --accent2: #ff6b35;
+    --accent3: #5b8fff;
+    --text: #e8edf5;
+    --text-dim: #7a8599;
+    --angle-color: #00e5a0;
+    --length-color: #ff6b35;
+    --point-color: #5b8fff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 12px;
+  }
+
+  .logo {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .logo span { color: var(--accent); }
+
+  .toolbar {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tool-btn:hover { border-color: var(--accent); color: var(--text); }
+  .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  .tool-btn.active-length { background: var(--length-color); color: #fff; border-color: var(--length-color); }
+  .tool-btn.active-calibrate { background: var(--accent3); color: #fff; border-color: var(--accent3); }
+
+  .tool-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  .sep { width: 1px; height: 24px; background: var(--border); }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .calibrate-input-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+  }
+  .calibrate-input-row label {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    white-space: nowrap;
+  }
+  .calibrate-input-row input {
+    width: 70px;
+    background: transparent;
+    border: none;
+    color: var(--accent3);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    outline: none;
+    text-align: right;
+  }
+  .calibrate-input-row select {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    outline: none;
+    cursor: pointer;
+  }
+  .calibrate-input-row select option { background: #1e2329; }
+
+  .clear-btn {
+    padding: 7px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .clear-btn:hover { border-color: #ff4444; color: #ff4444; }
+
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .canvas-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #080a0c;
+    cursor: crosshair;
+  }
+
+  #drop-zone {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 10;
+    background: var(--bg);
+    transition: background 0.2s;
+  }
+  #drop-zone.hidden { display: none; }
+  #drop-zone.drag-over { background: #111820; }
+
+  .upload-icon {
+    width: 64px; height: 64px;
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: var(--text-dim);
+    transition: all 0.2s;
+  }
+  #drop-zone.drag-over .upload-icon {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .upload-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .upload-sub {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+  }
+  .upload-cta {
+    padding: 10px 24px;
+    background: var(--accent);
+    color: #000;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .upload-cta:hover { opacity: 0.85; }
+
+  #file-input { display: none; }
+
+  #canvas-container {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #img-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+  }
+
+  #measure-canvas {
+    position: absolute;
+    top: 0; left: 0;
+  }
+
+  .sidebar {
+    width: 260px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .sidebar-header {
+    padding: 14px 16px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .measurements-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  .measurements-list::-webkit-scrollbar { width: 4px; }
+  .measurements-list::-webkit-scrollbar-track { background: transparent; }
+  .measurements-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .measurement-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+    background: var(--surface2);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .measurement-item:hover { border-color: var(--text-dim); }
+  .measurement-item.selected { border-color: var(--accent); }
+
+  .mitem-icon {
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .mitem-icon.angle { background: rgba(0,229,160,0.15); color: var(--angle-color); }
+  .mitem-icon.length { background: rgba(255,107,53,0.15); color: var(--length-color); }
+
+  .mitem-body { flex: 1; min-width: 0; }
+  .mitem-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .mitem-value {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    line-height: 1;
+  }
+  .mitem-value.angle { color: var(--angle-color); }
+  .mitem-value.length { color: var(--length-color); }
+
+  .mitem-del {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+  .mitem-del:hover { opacity: 1; color: #ff4444; }
+
+  .status-bar {
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .hint-box {
+    margin: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(91,143,255,0.08);
+    border: 1px solid rgba(91,143,255,0.2);
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    line-height: 1.6;
+  }
+  .hint-box b { color: var(--accent3); font-weight: 500; }
+
+  .calibrate-status {
+    margin: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(255,107,53,0.08);
+    border: 1px solid rgba(255,107,53,0.25);
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+  }
+  .calibrate-status b { color: var(--length-color); }
+  .calibrate-status.ok { background: rgba(0,229,160,0.07); border-color: rgba(0,229,160,0.25); }
+  .calibrate-status.ok b { color: var(--angle-color); }
+
+  .empty-state {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    line-height: 1.7;
+  }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    pointer-events: none;
+    z-index: 1000;
+    display: none;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Geo<span>Measure</span></div>
+
+  <div class="toolbar">
+    <button class="tool-btn" id="btn-angle" onclick="setMode('angle')">
+      <div class="tool-dot"></div> Angle
+    </button>
+    <button class="tool-btn" id="btn-length" onclick="setMode('length')">
+      <div class="tool-dot" style="background:var(--length-color)"></div> Length
+    </button>
+    <div class="sep"></div>
+    <button class="tool-btn" id="btn-calibrate" onclick="setMode('calibrate')">
+      <div class="tool-dot" style="background:var(--accent3)"></div> Calibrate
+    </button>
+  </div>
+
+  <div class="header-right">
+    <div class="calibrate-input-row">
+      <label>REF:</label>
+      <input type="number" id="ref-length" value="100" min="0.001" step="any">
+      <select id="ref-unit">
+        <option>mm</option>
+        <option>cm</option>
+        <option>m</option>
+        <option>in</option>
+        <option>ft</option>
+        <option>px</option>
+      </select>
+    </div>
+    <button class="clear-btn" onclick="clearAll()">✕ Clear All</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="canvas-area" id="canvas-area">
+    <div id="drop-zone">
+      <div class="upload-icon">📷</div>
+      <div class="upload-title">Drop your image here</div>
+      <div class="upload-sub">or click below to browse</div>
+      <button class="upload-cta" onclick="document.getElementById('file-input').click()">Choose Image</button>
+      <input type="file" id="file-input" accept="image/*" onchange="loadImage(event)">
+    </div>
+    <canvas id="img-canvas"></canvas>
+    <canvas id="measure-canvas" onmousedown="onMouseDown(event)" onmousemove="onMouseMove(event)" onmouseup="onMouseUp(event)"></canvas>
+  </div>
+
+  <div class="sidebar">
+    <div class="sidebar-header">Measurements</div>
+
+    <div class="hint-box" id="hint-box">
+      <b>ANGLE:</b> Click 3 points — vertex in middle<br>
+      <b>LENGTH:</b> Click 2 points to measure<br>
+      <b>CALIBRATE:</b> Draw a known reference line
+    </div>
+
+    <div id="calibrate-status" class="calibrate-status" style="display:none"></div>
+
+    <div class="measurements-list" id="measurements-list">
+      <div class="empty-state" id="empty-state">No measurements yet.<br>Load an image and<br>start measuring.</div>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-dot"></div>
+      <span id="status-text">Ready — load an image</span>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+const imgCanvas = document.getElementById('img-canvas');
+const measureCanvas = document.getElementById('measure-canvas');
+const imgCtx = imgCanvas.getContext('2d');
+const ctx = measureCanvas.getContext('2d');
+const canvasArea = document.getElementById('canvas-area');
+const tooltip = document.getElementById('tooltip');
+
+let mode = 'angle'; // 'angle' | 'length' | 'calibrate'
+let image = null;
+let imgOffX = 0, imgOffY = 0, imgW = 0, imgH = 0;
+let currentPoints = [];
+let measurements = [];
+let calibration = null; // { pixelsPerUnit, unit }
+let selectedId = null;
+let hoveredPoint = null;
+let isDragging = false;
+let dragTarget = null; // { measIdx, ptIdx }
+
+// Mode switcher
+function setMode(m) {
+  mode = m;
+  currentPoints = [];
+  document.getElementById('btn-angle').className = 'tool-btn' + (m === 'angle' ? ' active' : '');
+  document.getElementById('btn-length').className = 'tool-btn' + (m === 'length' ? ' active-length' : '');
+  document.getElementById('btn-calibrate').className = 'tool-btn' + (m === 'calibrate' ? ' active-calibrate' : '');
+  updateStatus();
+  redraw();
+}
+
+function updateStatus() {
+  const el = document.getElementById('status-text');
+  if (!image) { el.textContent = 'Ready — load an image'; return; }
+  if (mode === 'angle') {
+    const n = currentPoints.length;
+    el.textContent = n === 0 ? 'Click first ray point (A)' : n === 1 ? 'Click vertex point (B)' : 'Click second ray point (C)';
+  } else if (mode === 'length') {
+    el.textContent = currentPoints.length === 0 ? 'Click start point' : 'Click end point';
+  } else {
+    el.textContent = currentPoints.length === 0 ? 'Click start of reference' : 'Click end of reference';
+  }
+}
+
+// Image loading
+function loadImage(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  loadFile(file);
+}
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      image = img;
+      document.getElementById('drop-zone').classList.add('hidden');
+      resizeAndDraw();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Drag & drop
+const dropZone = document.getElementById('drop-zone');
+canvasArea.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+canvasArea.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+canvasArea.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) loadFile(file);
+});
+
+function resizeAndDraw() {
+  if (!image) return;
+  const areaW = canvasArea.clientWidth;
+  const areaH = canvasArea.clientHeight;
+  imgCanvas.width = areaW; imgCanvas.height = areaH;
+  measureCanvas.width = areaW; measureCanvas.height = areaH;
+
+  const scale = Math.min(areaW / image.width, areaH / image.height, 1);
+  imgW = image.width * scale;
+  imgH = image.height * scale;
+  imgOffX = (areaW - imgW) / 2;
+  imgOffY = (areaH - imgH) / 2;
+
+  imgCtx.clearRect(0, 0, areaW, areaH);
+  imgCtx.drawImage(image, imgOffX, imgOffY, imgW, imgH);
+  redraw();
+  updateStatus();
+}
+
+window.addEventListener('resize', resizeAndDraw);
+
+// --- Canvas coords helpers ---
+function getCanvasXY(e) {
+  const r = measureCanvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+function dist(a, b) {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+}
+
+function findNearPoint(pos, threshold = 10) {
+  for (let mi = 0; mi < measurements.length; mi++) {
+    const m = measurements[mi];
+    for (let pi = 0; pi < m.points.length; pi++) {
+      if (dist(pos, m.points[pi]) < threshold) return { measIdx: mi, ptIdx: pi };
+    }
+  }
+  return null;
+}
+
+// --- Events ---
+function onMouseDown(e) {
+  if (!image) return;
+  const pos = getCanvasXY(e);
+
+  // Right click = cancel current
+  if (e.button === 2) { currentPoints = []; redraw(); updateStatus(); return; }
+
+  // Check if near existing point (drag)
+  const near = findNearPoint(pos);
+  if (near && currentPoints.length === 0) {
+    isDragging = true;
+    dragTarget = near;
+    return;
+  }
+
+  // Add point
+  currentPoints.push({ x: pos.x, y: pos.y });
+
+  const needed = mode === 'angle' ? 3 : 2;
+  if (currentPoints.length === needed) {
+    finalizeMeasurement();
+  }
+  redraw();
+  updateStatus();
+}
+
+function onMouseMove(e) {
+  const pos = getCanvasXY(e);
+  const near = findNearPoint(pos);
+
+  if (isDragging && dragTarget) {
+    measurements[dragTarget.measIdx].points[dragTarget.ptIdx] = pos;
+    recomputeMeasurement(dragTarget.measIdx);
+    redraw();
+    updateSidebar();
+    return;
+  }
+
+  if (near) {
+    measureCanvas.style.cursor = 'move';
+    hoveredPoint = near;
+  } else {
+    measureCanvas.style.cursor = image ? 'crosshair' : 'default';
+    hoveredPoint = null;
+  }
+
+  if (image && currentPoints.length > 0) {
+    redraw();
+    drawPreview(pos);
+  }
+
+  // Tooltip for measurements
+  if (near && currentPoints.length === 0) {
+    const m = measurements[near.measIdx];
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top = (e.clientY - 28) + 'px';
+    tooltip.textContent = m.type === 'angle'
+      ? `∠ ${m.value.toFixed(2)}°`
+      : `⟺ ${formatLength(m.value)}`;
+  } else {
+    tooltip.style.display = 'none';
+  }
+}
+
+function onMouseUp() {
+  isDragging = false;
+  dragTarget = null;
+}
+
+function drawPreview(pos) {
+  ctx.save();
+  ctx.setLineDash([5, 5]);
+  ctx.strokeStyle = mode === 'angle' ? 'rgba(0,229,160,0.5)' : mode === 'length' ? 'rgba(255,107,53,0.5)' : 'rgba(91,143,255,0.5)';
+  ctx.lineWidth = 1.5;
+  const last = currentPoints[currentPoints.length - 1];
+  ctx.beginPath();
+  ctx.moveTo(last.x, last.y);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function finalizeMeasurement() {
+  const pts = [...currentPoints];
+  let value, type;
+
+  if (mode === 'angle') {
+    type = 'angle';
+    value = calcAngle(pts[0], pts[1], pts[2]);
+  } else if (mode === 'length') {
+    type = 'length';
+    value = dist(pts[0], pts[1]);
+  } else {
+    // calibrate
+    const pxDist = dist(pts[0], pts[1]);
+    const refLen = parseFloat(document.getElementById('ref-length').value) || 100;
+    const unit = document.getElementById('ref-unit').value;
+    calibration = { pixelsPerUnit: pxDist / refLen, unit };
+    showCalibrateStatus(refLen, unit, pxDist);
+    currentPoints = [];
+    redraw();
+    updateStatus();
+    return;
+  }
+
+  measurements.push({ id: Date.now(), type, value, points: pts });
+  currentPoints = [];
+  updateSidebar();
+}
+
+function recomputeMeasurement(idx) {
+  const m = measurements[idx];
+  if (m.type === 'angle') {
+    m.value = calcAngle(m.points[0], m.points[1], m.points[2]);
+  } else {
+    m.value = dist(m.points[0], m.points[1]);
+  }
+}
+
+function calcAngle(a, b, c) {
+  const v1 = { x: a.x - b.x, y: a.y - b.y };
+  const v2 = { x: c.x - b.x, y: c.y - b.y };
+  const dot = v1.x * v2.x + v1.y * v2.y;
+  const mag1 = Math.sqrt(v1.x ** 2 + v1.y ** 2);
+  const mag2 = Math.sqrt(v2.x ** 2 + v2.y ** 2);
+  if (mag1 === 0 || mag2 === 0) return 0;
+  return (Math.acos(Math.max(-1, Math.min(1, dot / (mag1 * mag2)))) * 180) / Math.PI;
+}
+
+function formatLength(px) {
+  if (!calibration) return px.toFixed(1) + ' px';
+  const val = px / calibration.pixelsPerUnit;
+  return val.toFixed(3) + ' ' + calibration.unit;
+}
+
+function showCalibrateStatus(refLen, unit, pxDist) {
+  const el = document.getElementById('calibrate-status');
+  el.style.display = 'block';
+  el.className = 'calibrate-status ok';
+  el.innerHTML = `<b>✓ Calibrated</b><br>${pxDist.toFixed(1)}px = ${refLen} ${unit}<br>Scale: ${(pxDist / refLen).toFixed(3)} px/${unit}`;
+}
+
+// --- Redraw ---
+function redraw() {
+  ctx.clearRect(0, 0, measureCanvas.width, measureCanvas.height);
+
+  measurements.forEach((m, mi) => {
+    const sel = m.id === selectedId;
+    if (m.type === 'angle') drawAngle(m, sel, mi === hoveredPoint?.measIdx);
+    else drawLength(m, sel, mi === hoveredPoint?.measIdx);
+  });
+
+  // Draw current in-progress points
+  currentPoints.forEach((p, i) => {
+    drawPoint(p, mode === 'angle' ? '#00e5a0' : mode === 'length' ? '#ff6b35' : '#5b8fff', 6);
+    if (i > 0) {
+      ctx.save();
+      ctx.strokeStyle = mode === 'angle' ? 'rgba(0,229,160,0.7)' : mode === 'length' ? 'rgba(255,107,53,0.7)' : 'rgba(91,143,255,0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(currentPoints[i - 1].x, currentPoints[i - 1].y);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+}
+
+function drawPoint(p, color, r = 5, outline = false) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+  if (outline) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fill();
+  } else {
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawAngle(m, selected, hovered) {
+  const [a, b, c] = m.points;
+  const col = selected ? '#fff' : hovered ? '#aaffdd' : '#00e5a0';
+  const lw = selected ? 2.5 : 1.8;
+
+  ctx.save();
+  ctx.strokeStyle = col;
+  ctx.lineWidth = lw;
+  ctx.setLineDash([]);
+
+  // Ray lines
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(b.x, b.y);
+  ctx.lineTo(c.x, c.y);
+  ctx.stroke();
+
+  // Arc
+  const r = Math.min(dist(a, b), dist(b, c)) * 0.35;
+  const ang1 = Math.atan2(a.y - b.y, a.x - b.x);
+  const ang2 = Math.atan2(c.y - b.y, c.x - b.x);
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, Math.max(r, 18), ang1, ang2, isClockwise(a, b, c));
+  ctx.stroke();
+
+  // Label
+  const mid = arcMidpoint(b, ang1, ang2, Math.max(r, 18), isClockwise(a, b, c));
+  drawLabel(`${m.value.toFixed(1)}°`, mid.x + 10, mid.y, col, selected);
+
+  // Points
+  drawPoint(a, col, 5);
+  drawPoint(b, '#ff6b35', 6);
+  drawPoint(c, col, 5);
+  ctx.restore();
+}
+
+function isClockwise(a, b, c) {
+  const cross = (a.x - b.x) * (c.y - b.y) - (a.y - b.y) * (c.x - b.x);
+  return cross > 0;
+}
+
+function arcMidpoint(center, a1, a2, r, cw) {
+  let mid;
+  if (cw) {
+    mid = a1 + ((a2 - a1 + 2 * Math.PI) % (2 * Math.PI)) / 2;
+  } else {
+    mid = a2 + ((a1 - a2 + 2 * Math.PI) % (2 * Math.PI)) / 2;
+  }
+  return { x: center.x + Math.cos(mid) * r, y: center.y + Math.sin(mid) * r };
+}
+
+function drawLength(m, selected, hovered) {
+  const [a, b] = m.points;
+  const col = selected ? '#fff' : hovered ? '#ffb38a' : '#ff6b35';
+  const lw = selected ? 2.5 : 1.8;
+
+  ctx.save();
+  ctx.strokeStyle = col;
+  ctx.lineWidth = lw;
+  ctx.setLineDash([]);
+
+  // Main line
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+
+  // End ticks
+  const angle = Math.atan2(b.y - a.y, b.x - a.x);
+  const perp = angle + Math.PI / 2;
+  const tl = 8;
+  drawTick(a, perp, tl, col);
+  drawTick(b, perp, tl, col);
+
+  // Label
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  const ox = Math.sin(angle) * 14;
+  const oy = -Math.cos(angle) * 14;
+  drawLabel(formatLength(m.value), mx + ox, my + oy, col, selected);
+
+  drawPoint(a, col, 5);
+  drawPoint(b, col, 5);
+  ctx.restore();
+}
+
+function drawTick(p, angle, len, color) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(p.x + Math.cos(angle) * len, p.y + Math.sin(angle) * len);
+  ctx.lineTo(p.x - Math.cos(angle) * len, p.y - Math.sin(angle) * len);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawLabel(text, x, y, color, bold) {
+  ctx.save();
+  ctx.font = `${bold ? '700' : '600'} ${bold ? 13 : 12}px DM Mono, monospace`;
+  const tw = ctx.measureText(text).width;
+  const pad = 5;
+  ctx.fillStyle = 'rgba(10,12,16,0.8)';
+  ctx.beginPath();
+  ctx.roundRect(x - pad, y - 10, tw + pad * 2, 18, 4);
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y + 4);
+  ctx.restore();
+}
+
+// --- Sidebar ---
+function updateSidebar() {
+  const list = document.getElementById('measurements-list');
+  const empty = document.getElementById('empty-state');
+  if (measurements.length === 0) {
+    empty.style.display = 'block';
+    list.innerHTML = '';
+    list.appendChild(empty);
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = '';
+  measurements.forEach((m, i) => {
+    const div = document.createElement('div');
+    div.className = 'measurement-item' + (m.id === selectedId ? ' selected' : '');
+    div.onclick = () => { selectedId = m.id === selectedId ? null : m.id; updateSidebar(); redraw(); };
+
+    const isAngle = m.type === 'angle';
+    div.innerHTML = `
+      <div class="mitem-icon ${isAngle ? 'angle' : 'length'}">${isAngle ? '∠' : '↔'}</div>
+      <div class="mitem-body">
+        <div class="mitem-label">${isAngle ? 'ANGLE ' : 'LENGTH '} #${i + 1}</div>
+        <div class="mitem-value ${isAngle ? 'angle' : 'length'}">
+          ${isAngle ? m.value.toFixed(2) + '°' : formatLength(m.value)}
+        </div>
+      </div>
+      <button class="mitem-del" onclick="deleteMeasurement(${m.id}, event)">✕</button>
+    `;
+    list.appendChild(div);
+  });
+  redraw();
+}
+
+function deleteMeasurement(id, e) {
+  e.stopPropagation();
+  measurements = measurements.filter(m => m.id !== id);
+  if (selectedId === id) selectedId = null;
+  updateSidebar();
+  redraw();
+}
+
+function clearAll() {
+  measurements = [];
+  currentPoints = [];
+  selectedId = null;
+  calibration = null;
+  document.getElementById('calibrate-status').style.display = 'none';
+  updateSidebar();
+  redraw();
+  updateStatus();
+}
+
+// Prevent context menu on canvas
+measureCanvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// Init
+setMode('angle');
+</script>
+</body>
+</html>
